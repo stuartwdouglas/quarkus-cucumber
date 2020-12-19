@@ -7,12 +7,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class HelloController {
 
-  @Autowired
-  DateProvider dateProvider;
-
   @RequestMapping("/")
   public String index() {
-    return "Greetings from Spring Boot!" +dateProvider.getNow();
+    return "Greetings from Spring Boot!";
   }
 
 }
