@@ -41,17 +41,17 @@ import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 
 @QuarkusTest
-public class DynamicCucumberTest {
+public abstract class CucumberTest {
   private static String [] mainArgs = new String [] {};
 
   @TestFactory
   List<DynamicNode> getTests() {
     try {
       // We run in a different ClassLoader then "main", so we need to grab any cli arguments from the SystemClassLoader
-      Class<?> aClass = ClassLoader.getSystemClassLoader().loadClass(this.getClass().getName());
+      Class<?> aClass = ClassLoader.getSystemClassLoader().loadClass(CucumberTest.class.getName());
       Field aClassDeclaredField = aClass.getDeclaredField("mainArgs");
       aClassDeclaredField.setAccessible(true);
-      DynamicCucumberTest.mainArgs = (String[]) aClassDeclaredField.get(aClass);
+      CucumberTest.mainArgs = (String[]) aClassDeclaredField.get(aClass);
     } catch (NoSuchFieldException | ClassNotFoundException | IllegalAccessException e) {
       e.printStackTrace();
     }
@@ -71,7 +71,8 @@ public class DynamicCucumberTest {
     runtimeOptionsBuilder.addGlue(URI.create("classpath:/" + Steps.class.getPackage().getName().replace(".", "/")));
 
     RuntimeOptions runtimeOptions = runtimeOptionsBuilder.build(commandlineOptionsParser.build());
-    FeatureSupplier featureSupplier = new FeaturePathFeatureSupplier(() -> Thread.currentThread().getContextClassLoader(), runtimeOptions,
+    ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+    FeatureSupplier featureSupplier = new FeaturePathFeatureSupplier(() -> contextClassLoader, runtimeOptions,
         parser);
 
     final Plugins plugins = new Plugins(new PluginFactory(), runtimeOptions);
@@ -88,15 +89,13 @@ public class DynamicCucumberTest {
 
     ObjectFactorySupplier objectFactorySupplier = () -> objectFactory;
 
-    TypeRegistryConfigurerSupplier typeRegistryConfigurerSupplier = new ScanningTypeRegistryConfigurerSupplier(() -> Thread.currentThread()
-        .getContextClassLoader(),
+    TypeRegistryConfigurerSupplier typeRegistryConfigurerSupplier = new ScanningTypeRegistryConfigurerSupplier(() -> contextClassLoader,
         runtimeOptions);
 
     Runner runner = new Runner(eventBus,
         Collections.singleton(new JavaBackendProviderService().create(objectFactorySupplier.get(),
             objectFactorySupplier.get(),
-            () -> Thread.currentThread()
-                .getContextClassLoader())),
+            () -> contextClassLoader)),
         objectFactorySupplier.get(),
         typeRegistryConfigurerSupplier.get(),
         runtimeOptions);
@@ -118,7 +117,15 @@ public class DynamicCucumberTest {
           }
         };
         eventBus.registerHandlerFor(TestStepFinished.class, handler);
-        context.runTestCase(r -> r.runPickle(p));
+        context.runTestCase(r -> {
+          ClassLoader old = Thread.currentThread().getContextClassLoader();
+          Thread.currentThread().setContextClassLoader(contextClassLoader);
+          try {
+            r.runPickle(p);
+          } finally {
+            Thread.currentThread().setContextClassLoader(old);
+          }
+        });
         eventBus.removeHandlerFor(TestStepFinished.class, handler);
 
         if (mainArgs.length == 0) {

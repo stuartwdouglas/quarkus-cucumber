@@ -1,10 +1,10 @@
 # quarkus-cucumber
 
-Hi, I created this little project to try to find a better way to play with Quarkus and Cucumber.
+Hi, I created this little project to try to find a better way to play with Quarkus and CucumberTest.
 
 The principal problem that we have is: 
 
-"Cucumber being a test framework integrates with the JUnit Platform rather then JUnit Jupiter. Together these two components are part of JUnit 5.Extensions are part of Jupiter. Not the JUnit Platform."
+"CucumberTest being a test framework integrates with the JUnit Platform rather then JUnit Jupiter. Together these two components are part of JUnit 5.Extensions are part of Jupiter. Not the JUnit Platform."
 mpkorstanje in the cucumber-jvm slack
 
 I created 3 branches:
